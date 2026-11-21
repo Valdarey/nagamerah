@@ -22,7 +22,15 @@ async def analyze(raw,provider_filter=None,offline=False,no_cache=False,refresh=
             results.append(ProviderResult(provider=p.name,status='skipped',summary={'reason':'API key not configured'})); continue
         if not no_cache and not refresh:
             cached=get(p.name,ioc['type'],ioc['value'])
-            if cached: results.append(ProviderResult(provider=p.name,**cached,from_cache=True)); continue
+            if cached:
+                # Cache payloads may already contain model fields such as
+                # 'provider' and 'from_cache'. Remove them before supplying
+                # authoritative values for the current cache lookup.
+                cached_payload=dict(cached)
+                cached_payload.pop('provider',None)
+                cached_payload.pop('from_cache',None)
+                results.append(ProviderResult(provider=p.name,**cached_payload,from_cache=True))
+                continue
         try:
             d=await p.lookup(ioc); d['queried_at']=datetime.now(timezone.utc).isoformat(); r=ProviderResult(provider=p.name,**d); results.append(r)
             if r.status=='ok': put(p.name,ioc['type'],ioc['value'],r.model_dump())
