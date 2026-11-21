@@ -1,0 +1,2 @@
+# Usage
+`nagamerah lookup IOC [--provider virustotal --provider abuseipdb] [--offline] [--no-cache] [--refresh] [--format txt|json|csv|html] [--output FILE]`. Bulk: `nagamerah bulk FILE` or `cat FILE | nagamerah bulk -`. Configuration: `config set/show/unset/path`. Doctor: `nagamerah doctor`. History: `nagamerah history`. Cache: `cache stats/clear`. Diff: `nagamerah diff old.json new.json`. Report: `nagamerah report file.json --format html`. Banner flags `--quiet`, `--no-banner`, environment `NAGAMERAH_NO_BANNER=1`.

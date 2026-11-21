@@ -1,0 +1,2 @@
+# Security & Privacy
+API keys are prompted without echo or read from environment; config file permissions 0600 and directory 0700. Never commit keys. IOC lookup sends the submitted indicator to enabled third-party provider(s); do not query confidential indicators without authorization. Private/loopback/reserved IPs are skipped for external providers. TLS verification enabled. Outputs escape HTML and mitigate CSV formula injection. Scores are triage aids, not guarantees; false positives/negatives, stale cache and provider gaps exist.

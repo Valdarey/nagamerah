@@ -1,0 +1,3 @@
+# Sample indicators (documentation examples)
+8.8.8.8
+example.com
