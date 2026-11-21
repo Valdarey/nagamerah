@@ -1,4 +1,4 @@
-# NAGAMERAH v1.0.0
+# NAGAMERAH v1.0.1
 Threat Intelligence Aggregator & IOC Enrichment CLI Tool — defensive IOC reputation lookup. Linux only (Kali, Debian, Ubuntu).
 
 ## Features
