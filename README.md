@@ -4,16 +4,9 @@
 
 # N A G A M E R A H
 
-<<<<<<< HEAD
-![Contributions](https://img.shields.io/badge/CONTRIBUTIONS-WELCOME-c1121f?style=for-the-badge&labelColor=1a1a1f)
-![Version](https://img.shields.io/badge/NAGAMERAH-v1.0.2-c1121f?style=for-the-badge&labelColor=1a1a1f)
-![Python](https://img.shields.io/badge/PYTHON-3.10+-c1121f?style=for-the-badge&logo=python&logoColor=white&labelColor=1a1a1f)
-![License](https://img.shields.io/badge/LICENSE-MIT-c1121f?style=for-the-badge&labelColor=1a1a1f)
-=======
 ![Version](https://img.shields.io/badge/NAGAMERAH-v1.0.2-f1c40f?style=for-the-badge&labelColor=1a1a1f)
 ![Python](https://img.shields.io/badge/PYTHON-3.10+-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=1a1a1f)
 ![License](https://img.shields.io/badge/LICENSE-MIT-2ea44f?style=for-the-badge&labelColor=1a1a1f)
->>>>>>> 47d237d (update readme)
 
 </div>
 
