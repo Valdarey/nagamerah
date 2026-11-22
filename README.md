@@ -54,8 +54,8 @@ NAGAMERAH is a powerful open-source tool that focuses on defensive threat intell
 **Install from source**
 
 ```bash
-git clone https://github.com/Valdarey/NAGAMERAH.git
-cd NAGAMERAH
+git clone https://github.com/Valdarey/nagamerah.git
+cd nagamerah
 
 chmod +x install.sh
 ./install.sh
@@ -64,8 +64,8 @@ chmod +x install.sh
 **Development installation**
 
 ```bash
-git clone https://github.com/Valdarey/NAGAMERAH.git
-cd NAGAMERAH
+git clone https://github.com/Valdarey/nagamerah.git
+cd nagamerah
 
 python3 -m venv .venv
 source .venv/bin/activate
