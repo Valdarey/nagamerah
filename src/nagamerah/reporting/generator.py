@@ -1,9 +1,10 @@
 """Render NAGAMERAH analysis results to TXT, JSON, CSV, or HTML."""
-import json
 import csv
-import io
 import html
-from datetime import datetime
+import io
+import json
+
+LABEL_WIDTH = 17  # widest label is "Private/Reserved"
 
 
 def safe_csv(value):
@@ -15,37 +16,41 @@ def _rows(data):
     return data if isinstance(data, list) else [data]
 
 
+def _kv(label, value):
+    """One aligned ``Label       : value`` line."""
+    return f"{label:<{LABEL_WIDTH}}: {value}"
+
+
 def _provider_lines(provider):
     summary = provider.get("summary") or {}
-    status = str(provider.get("status", "unknown")).upper()
-    cached = "HIT" if provider.get("from_cache") else "MISS"
-    lines = [f"Provider    : {provider.get('provider', 'unknown')}", f"Status      : {status}"]
+    lines = [
+        _kv("Provider", provider.get("provider", "unknown")),
+        _kv("Status", str(provider.get("status", "unknown")).upper()),
+    ]
     if provider.get("score") is not None:
-        lines.append(f"Score       : {provider.get('score')}/100")
+        lines.append(_kv("Score", f"{provider.get('score')}/100"))
     if provider.get("from_cache") is not None:
-        lines.append(f"Cache       : {cached}")
+        lines.append(_kv("Cache", "HIT" if provider.get("from_cache") else "MISS"))
     if provider.get("error"):
-        lines.append(f"Error       : {provider['error']}")
+        lines.append(_kv("Error", provider["error"]))
     reason = summary.get("reason")
     if reason:
-        lines.append(f"Reason      : {reason}")
+        lines.append(_kv("Reason", reason))
     stats = summary.get("stats") or {}
     if stats:
-        malicious = int(stats.get("malicious") or 0)
-        suspicious = int(stats.get("suspicious") or 0)
-        undetected = int(stats.get("undetected") or 0)
-        harmless = int(stats.get("harmless") or 0)
-        total = summary.get("engine_count") or sum(int(v or 0) for v in stats.values())
-        lines.append(f"Detection   : {malicious}/{total} engines malicious")
-        lines.append(f"Malicious  : {malicious}")
-        lines.append(f"Suspicious : {suspicious}")
-        lines.append(f"Undetected : {undetected}")
-        lines.append(f"Harmless   : {harmless}")
+        names = ("malicious", "suspicious", "undetected", "harmless")
+        counts = {name: int(stats.get(name) or 0) for name in names}
+        total = int(summary.get("engine_count") or sum(int(v or 0) for v in stats.values()))
+        lines.append(_kv("Detection", f"{counts['malicious']}/{total} engines malicious"))
+        lines.extend(_kv(name.capitalize(), counts[name]) for name in names)
+        other = total - sum(counts.values())
+        if other > 0:  # engines that gave no verdict (timeout, unsupported type, failure)
+            lines.append(_kv("Other", f"{other} (no verdict)"))
     reputation = summary.get("reputation")
     if reputation is not None:
-        lines.append(f"Reputation  : {reputation}")
+        lines.append(_kv("Reputation", reputation))
     if summary.get("abuseConfidenceScore") is not None:
-        lines.append(f"Abuse score: {summary['abuseConfidenceScore']}/100")
+        lines.append(_kv("Abuse score", f"{summary['abuseConfidenceScore']}/100"))
     return lines
 
 
@@ -57,17 +62,17 @@ def _txt(report):
         "=" * 48,
         "IOC INFORMATION",
         "-" * 48,
-        f"IOC          : {ioc.get('value', ioc.get('original', 'N/A'))}",
-        f"Type         : {ioc.get('type', 'N/A')}",
-        f"Defanged     : {'Yes' if ioc.get('defanged') else 'No'}",
-        f"Private/Reserved: {'Yes' if ioc.get('private_or_reserved') else 'No'}",
+        _kv("IOC", ioc.get("value", ioc.get("original", "N/A"))),
+        _kv("Type", ioc.get("type", "N/A")),
+        _kv("Defanged", "Yes" if ioc.get("defanged") else "No"),
+        _kv("Private/Reserved", "Yes" if ioc.get("private_or_reserved") else "No"),
         "",
         "THREAT ASSESSMENT",
         "-" * 48,
-        f"Score        : {report.get('score', 'N/A')} / 100",
-        f"Verdict      : {report.get('verdict', 'Unknown')}",
-        f"Confidence    : {report.get('confidence', 'N/A')}",
-        f"Labels       : {', '.join(report.get('labels') or ['Unknown'])}",
+        _kv("Score", f"{report.get('score', 'N/A')} / 100"),
+        _kv("Verdict", report.get("verdict", "Unknown")),
+        _kv("Confidence", report.get("confidence", "N/A")),
+        _kv("Labels", ", ".join(report.get("labels") or ["Unknown"])),
         "",
         "PROVIDER RESULTS",
         "-" * 48,
@@ -85,7 +90,6 @@ def _txt(report):
     return "\n".join(lines)
 
 
-
 def render(data, fmt):
     fmt = str(fmt).lower()
     if fmt == "json":
@@ -96,7 +100,9 @@ def render(data, fmt):
     if fmt == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["IOC", "Type", "Score", "Verdict", "Confidence", "Labels", "Provider count"])
+        writer.writerow(
+            ["IOC", "Type", "Score", "Verdict", "Confidence", "Labels", "Provider count"]
+        )
         for row in rows:
             ioc = row.get("ioc") or {}
             writer.writerow([
@@ -117,6 +123,7 @@ def render(data, fmt):
         return (
             "<!doctype html><meta charset='utf-8'><title>NAGAMERAH Report</title>"
             "<h1>NAGAMERAH IOC Report</h1><table><thead><tr><th>IOC</th><th>Type</th>"
-            "<th>Score</th><th>Verdict</th><th>Confidence</th></tr></thead><tbody>" + body + "</tbody></table>"
+            "<th>Score</th><th>Verdict</th><th>Confidence</th></tr></thead><tbody>"
+            + body + "</tbody></table>"
         )
     raise ValueError("Format tidak didukung: gunakan txt, json, csv, atau html")

@@ -24,18 +24,63 @@ from .core.database import connect, history
 from .core.engine import analyze
 from .reporting.generator import render
 from .utils.banner import show
+from .utils.help import CobraCommand, CobraGroup
 
 MAX_INPUT_BYTES = 10 * 1024 * 1024
 DEFAULT_PROVIDERS = ("virustotal", "abuseipdb", "local_dns")
 KEY_NAMES = ("vt_key", "abuseipdb_key")
 
-app = typer.Typer(
-    no_args_is_help=True,
-    help="Threat Intelligence Aggregator & IOC Enrichment CLI Tool",
-)
-config_app = typer.Typer(help="Manage configuration and API keys.", no_args_is_help=True)
-cache_app = typer.Typer(help="Manage the local cache.", no_args_is_help=True)
-database_app = typer.Typer(help="Manage the local database.", no_args_is_help=True)
+# Help panels: the section titles shown in --help (Dalfox-style grouping).
+INPUT = "Input"
+CACHE = "Cache"
+OUTPUT = "Output"
+FILTER = "Filter"
+FORMATS = "Report format: txt, json, csv or html"
+
+ROOT_HELP = """\
+NAGAMERAH is a threat intelligence aggregator and IOC enrichment tool.
+It looks up IPs, domains, URLs and file hashes in VirusTotal and AbuseIPDB,
+combines the results into one reputation score, and writes TXT, JSON, CSV
+or HTML reports. API keys are yours: store them with "nagamerah config set"."""
+
+ROOT_EXAMPLES = """\
+nagamerah lookup 8.8.8.8
+nagamerah bulk iocs.txt --format csv --output report.csv
+nagamerah config set vt_key"""
+
+LOOKUP_EXAMPLES = """\
+nagamerah lookup 8.8.8.8
+nagamerah lookup hxxp://evil[.]example.com/login --format json
+nagamerah lookup 44d88612fea8a8f36de82e1278abb02f --provider virustotal
+nagamerah lookup 203.0.113.10 --offline"""
+
+BULK_EXAMPLES = """\
+nagamerah bulk iocs.txt
+nagamerah bulk iocs.txt --format csv --output report.csv
+nagamerah bulk feed.csv --column indicator
+cat iocs.txt | nagamerah bulk - --format json"""
+
+
+def _group(help_text: str, epilog: str | None = None) -> typer.Typer:
+    return typer.Typer(
+        cls=CobraGroup,
+        help=help_text,
+        epilog=epilog,
+        no_args_is_help=True,
+        add_completion=False,
+        context_settings={"help_option_names": ["-h", "--help"]},
+    )
+
+
+def _command(target: typer.Typer, name: str | None = None, examples: str | None = None):
+    """Register a command that renders its --help in the plain grouped style."""
+    return target.command(name, cls=CobraCommand, epilog=examples)
+
+
+app = _group(ROOT_HELP, ROOT_EXAMPLES)
+config_app = _group("Manage configuration and API keys")
+cache_app = _group("Manage the local cache")
+database_app = _group("Manage the local database")
 app.add_typer(config_app, name="config")
 app.add_typer(cache_app, name="cache")
 app.add_typer(database_app, name="database")
@@ -53,7 +98,7 @@ def main(
         False, "--version", callback=_version_callback, is_eager=True, help="Show version"
     ),
 ) -> None:
-    """NAGAMERAH main entry point."""
+    pass
 
 
 def _emit(text: str, output: str | None) -> None:
@@ -69,20 +114,34 @@ def _emit(text: str, output: str | None) -> None:
     typer.echo(f"Report saved: {output}", err=True)
 
 
-@app.command()
+@_command(app, examples=LOOKUP_EXAMPLES)
 def lookup(
-    ioc: str,
-    fmt: str = typer.Option("txt", "--format", help="txt, json, csv or html"),
-    output: str = typer.Option(None, "--output", help="Write the report to a file"),
-    provider: list[str] = typer.Option(None, "--provider", help="Limit providers (repeatable)"),
-    no_cache: bool = typer.Option(False, "--no-cache"),
-    refresh: bool = typer.Option(False, "--refresh"),
-    offline: bool = typer.Option(False, "--offline"),
-    quiet: bool = typer.Option(False, "--quiet"),
-    no_banner: bool = typer.Option(False, "--no-banner"),
-    verbose: bool = typer.Option(False, "--verbose"),
+    ioc: str = typer.Argument(..., help="IP, domain, URL or file hash (defanged is accepted)"),
+    provider: list[str] = typer.Option(
+        None, "--provider", help="Use only this provider, repeatable", rich_help_panel=INPUT
+    ),
+    offline: bool = typer.Option(
+        False, "--offline", help="Use cached and local data only", rich_help_panel=INPUT
+    ),
+    no_cache: bool = typer.Option(
+        False, "--no-cache", help="Do not read or write the cache", rich_help_panel=CACHE
+    ),
+    refresh: bool = typer.Option(
+        False, "--refresh", help="Ignore cached data and update it", rich_help_panel=CACHE
+    ),
+    fmt: str = typer.Option("txt", "--format", help=FORMATS, rich_help_panel=OUTPUT),
+    output: str = typer.Option(
+        None, "--output", help="Write the report to a file", rich_help_panel=OUTPUT
+    ),
+    quiet: bool = typer.Option(False, "--quiet", help="Hide the banner", rich_help_panel=OUTPUT),
+    no_banner: bool = typer.Option(
+        False, "--no-banner", help="Hide the banner", rich_help_panel=OUTPUT
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", help="Show technical errors", rich_help_panel=OUTPUT
+    ),
 ) -> None:
-    """Look up a single IOC (IP, domain, URL or hash)."""
+    """Look up a single IOC (IP, domain, URL or hash)"""
     show(ioc, "auto-detected", ", ".join(provider or DEFAULT_PROVIDERS), quiet, no_banner)
     try:
         result = asyncio.run(analyze(
@@ -165,20 +224,36 @@ async def _analyze_many(
             progress.advance(task)
 
 
-@app.command()
+@_command(app, examples=BULK_EXAMPLES)
 def bulk(
-    source: str,
-    fmt: str = typer.Option("txt", "--format", help="txt, json, csv or html"),
-    output: str = typer.Option(None, "--output", help="Write the report to a file"),
-    column: str = typer.Option("ioc", "--column", help="IOC column name for CSV input"),
-    provider: list[str] = typer.Option(None, "--provider", help="Limit providers (repeatable)"),
-    no_cache: bool = typer.Option(False, "--no-cache"),
-    refresh: bool = typer.Option(False, "--refresh"),
-    offline: bool = typer.Option(False, "--offline"),
-    quiet: bool = typer.Option(False, "--quiet"),
-    no_banner: bool = typer.Option(False, "--no-banner"),
+    source: str = typer.Argument(
+        ..., metavar="FILE", help="TXT or CSV file with one IOC per line, or - for stdin"
+    ),
+    column: str = typer.Option(
+        "ioc", "--column", help="IOC column name for CSV input", rich_help_panel=INPUT
+    ),
+    provider: list[str] = typer.Option(
+        None, "--provider", help="Use only this provider, repeatable", rich_help_panel=INPUT
+    ),
+    offline: bool = typer.Option(
+        False, "--offline", help="Use cached and local data only", rich_help_panel=INPUT
+    ),
+    no_cache: bool = typer.Option(
+        False, "--no-cache", help="Do not read or write the cache", rich_help_panel=CACHE
+    ),
+    refresh: bool = typer.Option(
+        False, "--refresh", help="Ignore cached data and update it", rich_help_panel=CACHE
+    ),
+    fmt: str = typer.Option("txt", "--format", help=FORMATS, rich_help_panel=OUTPUT),
+    output: str = typer.Option(
+        None, "--output", help="Write the report to a file", rich_help_panel=OUTPUT
+    ),
+    quiet: bool = typer.Option(False, "--quiet", help="Hide the banner", rich_help_panel=OUTPUT),
+    no_banner: bool = typer.Option(
+        False, "--no-banner", help="Hide the banner", rich_help_panel=OUTPUT
+    ),
 ) -> None:
-    """Analyze many IOCs from a file, a CSV, or stdin ('-')."""
+    """Analyze many IOCs from a file, a CSV, or stdin"""
     show(source, "bulk", ", ".join(provider or DEFAULT_PROVIDERS), quiet, no_banner)
     lines = _extract_iocs(_read_source(source), source, column)
     unique = list(dict.fromkeys(lines))
@@ -207,12 +282,14 @@ def _database_status() -> str:
     return "writable"
 
 
-@app.command()
+@_command(app, examples="nagamerah doctor")
 def doctor(
-    quiet: bool = typer.Option(False, "--quiet"),
-    no_banner: bool = typer.Option(False, "--no-banner"),
+    quiet: bool = typer.Option(False, "--quiet", help="Hide the banner", rich_help_panel=OUTPUT),
+    no_banner: bool = typer.Option(
+        False, "--no-banner", help="Hide the banner", rich_help_panel=OUTPUT
+    ),
 ) -> None:
-    """Check configuration and environment readiness."""
+    """Check configuration and environment readiness"""
     active = ["local_dns"]
     if get_key("vt_key"):
         active.append("virustotal")
@@ -231,12 +308,16 @@ def doctor(
     typer.echo("Active providers: " + ", ".join(active))
 
 
-@app.command("history")
+@_command(app, "history", examples="nagamerah history --verdict malicious --limit 20")
 def history_cmd(
-    verdict: str = typer.Option(None, "--verdict"),
-    limit: int = typer.Option(50, "--limit"),
+    verdict: str = typer.Option(
+        None, "--verdict", help="Only show this verdict", rich_help_panel=FILTER
+    ),
+    limit: int = typer.Option(
+        50, "--limit", help="Maximum rows to show", rich_help_panel=FILTER
+    ),
 ) -> None:
-    """Show previous lookups."""
+    """Show previous lookups"""
     table = Table(title="Lookup History")
     for name in ("Timestamp", "IOC", "Type", "Score", "Verdict"):
         table.add_column(name)
@@ -246,19 +327,24 @@ def history_cmd(
     Console().print(table)
 
 
-@app.command()
-def diff(old: str, new: str) -> None:
-    """Compare two result files."""
+@_command(app, examples="nagamerah diff old.json new.json")
+def diff(
+    old: str = typer.Argument(..., metavar="OLD", help="Earlier result file (JSON)"),
+    new: str = typer.Argument(..., metavar="NEW", help="Later result file (JSON)"),
+) -> None:
+    """Compare two result files"""
     typer.echo(json.dumps(compare(old, new), indent=2))
 
 
-@app.command()
+@_command(app, examples="nagamerah report result.json --format html --output report.html")
 def report(
-    source: str,
-    fmt: str = typer.Option("html", "--format", help="txt, json, csv or html"),
-    output: str = typer.Option(None, "--output"),
+    source: str = typer.Argument(..., metavar="FILE", help="Saved JSON result file"),
+    fmt: str = typer.Option("html", "--format", help=FORMATS, rich_help_panel=OUTPUT),
+    output: str = typer.Option(
+        None, "--output", help="Write the report to a file", rich_help_panel=OUTPUT
+    ),
 ) -> None:
-    """Generate a report from a saved JSON result."""
+    """Generate a report from a saved JSON result"""
     data = json.loads(pathlib.Path(source).read_text(encoding="utf-8"))
     _emit(render(data, fmt), output)
 
@@ -269,9 +355,11 @@ def _check_key_name(key: str) -> None:
         raise typer.Exit(2)
 
 
-@config_app.command("set")
-def config_set(key: str) -> None:
-    """Store an API key through a hidden prompt (never pass the key as an argument)."""
+@_command(config_app, "set", examples="nagamerah config set vt_key")
+def config_set(
+    key: str = typer.Argument(..., metavar="KEY", help="vt_key or abuseipdb_key"),
+) -> None:
+    """Store an API key through a hidden prompt"""
     _check_key_name(key)
     value = getpass.getpass(f"Enter {key}: ").strip()
     if not value:
@@ -281,44 +369,48 @@ def config_set(key: str) -> None:
     typer.echo("Saved securely.")
 
 
-@config_app.command("unset")
-def config_unset(key: str) -> None:
-    """Remove a stored API key."""
+@_command(config_app, "unset", examples="nagamerah config unset vt_key")
+def config_unset(
+    key: str = typer.Argument(..., metavar="KEY", help="vt_key or abuseipdb_key"),
+) -> None:
+    """Remove a stored API key"""
     _check_key_name(key)
     unset(key)
     typer.echo("Removed.")
 
 
-@config_app.command("show")
+@_command(config_app, "show")
 def config_show() -> None:
-    """Show configuration (keys are masked)."""
+    """Show configuration (keys are masked)"""
     typer.echo(f"Config path: {path()}")
     typer.echo("vt_key: " + masked(get_key("vt_key")))
     typer.echo("abuseipdb_key: " + masked(get_key("abuseipdb_key")))
 
 
-@config_app.command("path")
+@_command(config_app, "path")
 def config_path() -> None:
-    """Print the configuration file path."""
+    """Print the configuration file path"""
     typer.echo(path())
 
 
-@cache_app.command("stats")
+@_command(cache_app, "stats")
 def cache_stats() -> None:
-    """Show cache statistics."""
+    """Show cache statistics"""
     typer.echo(f"Cache entries: {stats()}")
 
 
-@cache_app.command("clear")
+@_command(cache_app, "clear")
 def cache_clear() -> None:
-    """Delete all cached results."""
+    """Delete all cached results"""
     clear()
     typer.echo("Cache cleared.")
 
 
-@database_app.command("clear-history")
-def db_clear_history(confirm: bool = typer.Option(False, "--yes")) -> None:
-    """Delete all lookup history."""
+@_command(database_app, "clear-history")
+def db_clear_history(
+    confirm: bool = typer.Option(False, "--yes", help="Do not ask for confirmation"),
+) -> None:
+    """Delete all lookup history"""
     if not confirm:
         typer.confirm("Delete all history?", abort=True)
     with connect() as db:
@@ -326,7 +418,13 @@ def db_clear_history(confirm: bool = typer.Option(False, "--yes")) -> None:
     typer.echo("History deleted.")
 
 
-@database_app.command("path")
+@_command(database_app, "path")
 def db_path() -> None:
-    """Print the database file path."""
+    """Print the database file path"""
     typer.echo(data_dir() / "nagamerah.db")
+
+
+@_command(app, "version")
+def version_cmd() -> None:
+    """Show version"""
+    typer.echo(f"NAGAMERAH v{__version__}")
