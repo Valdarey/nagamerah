@@ -62,7 +62,7 @@ Provider availability and returned data depend on the IOC type, API access, serv
 ### Install from source
 
 ```bash
-git clone https://github.com/Valdarey/NAGAMERAH.git
+git clone https://github.com/Valdarey/nagamerah.git
 cd NAGAMERAH
 
 chmod +x install.sh
