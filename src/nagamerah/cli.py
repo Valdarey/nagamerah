@@ -85,7 +85,13 @@ def lookup(
     """Look up a single IOC (IP, domain, URL or hash)."""
     show(ioc, "auto-detected", ", ".join(provider or DEFAULT_PROVIDERS), quiet, no_banner)
     try:
-        result = asyncio.run(analyze(ioc, provider, no_cache, refresh, offline))
+        result = asyncio.run(analyze(
+            ioc,
+            provider_filter=provider,
+            offline=offline,
+            no_cache=no_cache,
+            refresh=refresh,
+        ))
     except ValueError as exc:
         typer.echo(f"Invalid IOC: {exc}", err=True)
         raise typer.Exit(2) from exc
@@ -147,7 +153,13 @@ async def _analyze_many(
         task = progress.add_task("Analyzing", total=len(items))
         for item in items:
             try:
-                results.append(await analyze(item, provider, no_cache, refresh, offline))
+                results.append(await analyze(
+                    item,
+                    provider_filter=provider,
+                    offline=offline,
+                    no_cache=no_cache,
+                    refresh=refresh,
+                ))
             except Exception as exc:  # noqa: BLE001 - one bad IOC must not stop the run
                 invalid.append({"ioc": item, "error": str(exc)})
             progress.advance(task)
