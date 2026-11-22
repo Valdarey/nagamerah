@@ -39,9 +39,13 @@ FORMATS = "Report format: txt, json, csv or html"
 
 ROOT_HELP = """\
 NAGAMERAH is a threat intelligence aggregator and IOC enrichment tool.
-It looks up IPs, domains, URLs and file hashes in VirusTotal and AbuseIPDB,
-combines the results into one reputation score, and writes TXT, JSON, CSV
-or HTML reports. API keys are yours: store them with "nagamerah config set"."""
+It analyzes IPs, domains, URLs and file hashes using external threat
+intelligence providers and contextual evidence.
+
+NAGAMERAH produces separate Threat Scores, Verdicts, Confidence
+Assessments and Provider Coverage reports in TXT, JSON, CSV or HTML.
+
+API keys are yours: store them with "nagamerah config set"."""
 
 ROOT_EXAMPLES = """\
 nagamerah lookup 8.8.8.8
