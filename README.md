@@ -1,24 +1,159 @@
-# NAGAMERAH
+<div align="center">
 
-**Threat Intelligence Aggregator & IOC Enrichment CLI Tool**
+<img src="assets/logo.png" alt="NAGAMERAH logo" width="220">
 
-NAGAMERAH is a Linux-based command-line tool for defensive cybersecurity analysis that aggregates threat intelligence from multiple sources to enrich, investigate, and assess Indicators of Compromise (IOCs).
+# N A G A M E R A H
 
-It helps security analysts perform IOC reputation checks, gather threat intelligence, identify suspicious indicators, and generate structured investigation reports through a single CLI interface.
+![Contributions](https://img.shields.io/badge/CONTRIBUTIONS-WELCOME-c1121f?style=for-the-badge&labelColor=1a1a1f)
+![Version](https://img.shields.io/badge/NAGAMERAH-v1.0.0-c1121f?style=for-the-badge&labelColor=1a1a1f)
+![Python](https://img.shields.io/badge/PYTHON-3.10+-c1121f?style=for-the-badge&logo=python&logoColor=white&labelColor=1a1a1f)
+![License](https://img.shields.io/badge/LICENSE-MIT-c1121f?style=for-the-badge&labelColor=1a1a1f)
+
+</div>
+
+NAGAMERAH is a powerful open-source tool that focuses on defensive threat intelligence, making it ideal for quickly enriching and assessing Indicators of Compromise (IOCs). It aggregates reputation data from multiple sources into a single CLI, so analysts can investigate faster and make evidence-driven decisions.
+
+## Key features
+
+- **Subcommands:** `lookup`, `bulk`, `config`, `history`, `cache`, `diff`, `doctor`
+- **IOC Detection:** Auto-detects IPv4, IPv6, domain, URL, MD5, SHA-1, and SHA-256
+- **Normalization:** Handles defanged indicators (`hxxp://`, `[.]`) and normalizes input
+- **Intelligence:** VirusTotal, AbuseIPDB, and local DNS records (A, AAAA, MX, NS, TXT)
+- **Assessment:** Weighted reputation score with an evidence-based verdict
+- **Storage:** SQLite-backed caching and investigation history
+- **Bulk Mode:** Analyze many IOCs from a single input file
+- **Output:** TXT / JSON / CSV / HTML reports, report comparison with `diff`
+- **Security:** Hidden API key prompts, restrictive file permissions, masked config output
 
 ---
 
-## Features
+## Table of Contents
 
-- **IOC Detection & Validation** — Automatically identifies IPv4, IPv6, domains, URLs, MD5, SHA-1, and SHA-256 hashes.
-- **IOC Normalization** — Handles defanged indicators and normalizes input for analysis.
-- **Threat Intelligence Integration** — Retrieves reputation data from VirusTotal and AbuseIPDB using your own API keys.
-- **Local DNS Intelligence** — Performs DNS lookups for A, AAAA, MX, NS, and TXT records.
-- **Threat Assessment** — Calculates a weighted reputation score and generates a verdict based on available evidence.
-- **Caching & History** — Stores lookup results and investigation history using SQLite.
-- **Bulk Analysis** — Processes multiple IOCs from a single input file.
-- **Report Export** — Supports JSON, TXT, CSV, and HTML report formats.
-- **Secure Configuration** — Prompts for API keys securely and stores configuration with restrictive file permissions.
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Supported IOC Types](#supported-ioc-types)
+- [Threat Intelligence Providers](#threat-intelligence-providers)
+- [Output Formats](#output-formats)
+- [Security & Privacy](#security--privacy)
+- [Disclaimer](#disclaimer)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Installation
+
+**Requirements**
+
+- Linux (Kali Linux, Debian, or Ubuntu)
+- Python 3.10+
+- Internet connection
+- API keys for supported providers (optional, but recommended)
+
+**Install from source**
+
+```bash
+git clone https://github.com/Valdarey/NAGAMERAH.git
+cd NAGAMERAH
+
+chmod +x install.sh
+./install.sh
+```
+
+**Development installation**
+
+```bash
+git clone https://github.com/Valdarey/NAGAMERAH.git
+cd NAGAMERAH
+
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip install -e '.[dev]'
+```
+
+---
+
+## Configuration
+
+### Configure API keys
+
+```bash
+nagamerah config set vt_key
+nagamerah config set abuseipdb_key
+```
+
+Keys are prompted interactively and input is hidden.
+
+### Environment variables
+
+```bash
+export VT_API_KEY="your_virustotal_api_key"
+export ABUSEIPDB_API_KEY="your_abuseipdb_api_key"
+```
+
+### View configuration
+
+```bash
+nagamerah config show
+```
+
+Sensitive credentials are masked in the output.
+
+---
+
+## Usage
+
+```text
+nagamerah <command> [options]
+```
+
+| Command | Description |
+|---|---|
+| `lookup <ioc>` | Enrich and assess a single IOC |
+| `bulk <file>` | Analyze multiple IOCs from a file |
+| `config set/show` | Manage API keys and configuration |
+| `history` | View previous investigations |
+| `cache stats` | View cache statistics |
+| `diff <old> <new>` | Compare two generated reports |
+| `doctor` | Check environment, dependencies, and configuration |
+
+### Single IOC lookup
+
+```bash
+# IP address
+nagamerah lookup 8.8.8.8
+
+# Domain
+nagamerah lookup example.com
+
+# File hash
+nagamerah lookup 44d88612fea8a8f36de82e1278abb02f
+```
+
+### JSON output
+
+```bash
+nagamerah lookup example.com --format json
+```
+
+### Bulk IOC analysis
+
+```bash
+nagamerah bulk iocs.txt
+nagamerah bulk iocs.txt --format csv --output report.csv
+```
+
+### Diagnostics, history, cache, and diff
+
+```bash
+nagamerah doctor
+nagamerah history
+nagamerah cache stats
+nagamerah diff old.json new.json
+```
 
 ---
 
@@ -50,156 +185,7 @@ Provider availability and returned data depend on the IOC type, API access, serv
 
 ---
 
-## Installation
-
-### Requirements
-
-- Linux (Kali Linux, Debian, or Ubuntu)
-- Python 3.10+
-- Internet connection
-- API keys for supported threat intelligence providers (optional, but recommended)
-
-### Install from source
-
-```bash
-git clone https://github.com/Valdarey/nagamerah.git
-cd NAGAMERAH
-
-chmod +x install.sh
-./install.sh
-```
-
-The installation script will handle the installation process and prepare NAGAMERAH for use.
-
----
-
-### Development Installation
-
-To install NAGAMERAH in a development environment:
-
-```bash
-git clone https://github.com/Valdarey/NAGAMERAH.git
-cd NAGAMERAH
-
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install -e '.[dev]'
-```
-
----
-
-## Configuration
-
-NAGAMERAH supports API key configuration through its built-in configuration commands or environment variables.
-
-### Configure API Keys
-
-```bash
-nagamerah config set vt_key
-nagamerah config set abuseipdb_key
-```
-
-API keys are prompted interactively and input is hidden.
-
-### Environment Variables
-
-Alternatively, configure API keys using environment variables:
-
-```bash
-export VT_API_KEY="your_virustotal_api_key"
-export ABUSEIPDB_API_KEY="your_abuseipdb_api_key"
-```
-
-### View Configuration
-
-```bash
-nagamerah config show
-```
-
-Configuration output masks sensitive credentials to prevent accidental exposure.
-
----
-
-## Usage
-
-### Single IOC Lookup
-
-Analyze an IP address:
-
-```bash
-nagamerah lookup 8.8.8.8
-```
-
-Analyze a domain:
-
-```bash
-nagamerah lookup example.com
-```
-
-Analyze a file hash:
-
-```bash
-nagamerah lookup 44d88612fea8a8f36de82e1278abb02f
-```
-
-### JSON Output
-
-```bash
-nagamerah lookup example.com --format json
-```
-
-### Bulk IOC Analysis
-
-Analyze multiple indicators from a file:
-
-```bash
-nagamerah bulk iocs.txt
-```
-
-Export bulk results to CSV:
-
-```bash
-nagamerah bulk iocs.txt --format csv --output report.csv
-```
-
-### System Diagnostics
-
-Check the environment, dependencies, and configuration:
-
-```bash
-nagamerah doctor
-```
-
-### Investigation History
-
-View previous IOC investigations:
-
-```bash
-nagamerah history
-```
-
-### Cache Management
-
-View cache statistics:
-
-```bash
-nagamerah cache stats
-```
-
-### Compare Reports
-
-Compare two previously generated reports:
-
-```bash
-nagamerah diff old.json new.json
-```
-
----
-
 ## Output Formats
-
-NAGAMERAH supports multiple report formats for analysis, documentation, and integration with other workflows.
 
 | Format | Use Case |
 |---|---|
@@ -207,8 +193,6 @@ NAGAMERAH supports multiple report formats for analysis, documentation, and inte
 | JSON | Structured data, automation, and integration |
 | CSV | Spreadsheet analysis and IOC tracking |
 | HTML | Readable reports for investigation and presentation |
-
-Example:
 
 ```bash
 nagamerah lookup example.com --format json --output report.json
@@ -242,8 +226,6 @@ Users are responsible for ensuring that their use of the tool complies with appl
 
 ## Roadmap
 
-Planned development may include:
-
 - Additional threat intelligence providers
 - Enhanced IOC correlation
 - Improved threat context and evidence analysis
@@ -253,10 +235,23 @@ Planned development may include:
 
 ---
 
+## Contributing
+
+Contributions are welcome! Feel free to open an issue or submit a pull request.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Open a pull request
+
+---
+
 ## License
 
 This project is licensed under the **MIT License**.
 
----
+<div align="center">
 
 **NAGAMERAH** — Enrich indicators. Investigate threats. Make evidence-driven decisions.
+
+</div>
